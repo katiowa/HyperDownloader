@@ -76,6 +76,17 @@ if "%v_fmt%"=="3" (
     set "codec_audio=copy"
 )
 
+:: Forcar H.264 para compatibilidade
+echo.
+echo  --- Forcar H.264 para garantir thumbnail? ---
+echo  (Recodifica o video para H.264 se vier em outro codec)
+echo  [y] Sim - Mais lento, mas 100%% compativel (Thumbnail funciona em QUALQUER PC)
+echo  [n] Nao - Mais rapido, mas pode vir em H.265/AV1 (Pode nao ter thumbnail)
+set /p "forcar_h264=Opcao (y/n): "
+
+set "recode_cmd="
+if /i "!forcar_h264!"=="y" set "recode_cmd=--recode-video mp4"
+
 echo.
 echo  --- Qualidade de Video ---
 echo  [0] ORIGINAL/BEST (Melhor disponivel - Sem conversao)
@@ -96,14 +107,14 @@ if "%qual_video%"=="0" (
     set "modo_video=original"
 )
 if "%qual_video%"=="1" set "formato_video=bestvideo*+bestaudio/best"
-if "%qual_video%"=="2" set "formato_video=bestvideo[height<=4320][fps<=120]+bestaudio/best[height<=4320]"
-if "%qual_video%"=="3" set "formato_video=bestvideo[height<=2160][fps<=120]+bestaudio/best[height<=2160]"
-if "%qual_video%"=="4" set "formato_video=bestvideo[height<=2160][fps<=60]+bestaudio/best[height<=2160]"
-if "%qual_video%"=="5" set "formato_video=bestvideo[height<=1440][fps<=60]+bestaudio/best[height<=1440]"
-if "%qual_video%"=="6" set "formato_video=bestvideo[height<=1080][fps<=60]+bestaudio/best[height<=1080]"
-if "%qual_video%"=="7" set "formato_video=bestvideo[height<=720][fps<=60]+bestaudio/best[height<=720]"
-if "%qual_video%"=="8" set "formato_video=bestvideo[height<=480][fps<=30]+bestaudio/best[height<=480]"
-if "%qual_video%"=="9" set "formato_video=bestvideo[height<=360]+bestaudio/best[height<=360]"
+if "%qual_video%"=="2" set "formato_video=bestvideo[height<=4320][fps<=120]+bestaudio/best[height<=4320]/best"
+if "%qual_video%"=="3" set "formato_video=bestvideo[height<=2160][fps<=120]+bestaudio/best[height<=2160]/best"
+if "%qual_video%"=="4" set "formato_video=bestvideo[height<=2160][fps<=60]+bestaudio/best[height<=2160]/best"
+if "%qual_video%"=="5" set "formato_video=bestvideo[height<=1440][fps<=60]+bestaudio/best[height<=1440]/best"
+if "%qual_video%"=="6" set "formato_video=bestvideo[height<=1080][fps<=60]+bestaudio/best[height<=1080]/best"
+if "%qual_video%"=="7" set "formato_video=bestvideo[height<=720][fps<=60]+bestaudio/best[height<=720]/best"
+if "%qual_video%"=="8" set "formato_video=bestvideo[height<=480][fps<=30]+bestaudio/best[height<=480]/best"
+if "%qual_video%"=="9" set "formato_video=bestvideo[height<=360]+bestaudio/best[height<=360]/best"
 
 echo.
 echo  --- Qualidade de Audio ---
@@ -162,20 +173,20 @@ echo  [!] Iniciando download de VIDEO (%ext_video%)...
 if "%modo_video%"=="original" (
     if "%modo_audio_video%"=="original" (
         echo  [MODO SUPREMO - 100%% ORIGINAL - Sem conversao]
-        yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% %recode_cmd% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
     ) else (
         echo  [MODO ORIGINAL VIDEO + Audio customizado]
-        yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% %recode_cmd% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
     )
 ) else (
     if "%modo_audio_video%"=="original" (
         echo  [Video customizado + MODO ORIGINAL AUDIO]
-        yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% %recode_cmd% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
     ) else (
         if "%v_fmt%"=="1" (
-            yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" --postprocessor-args "ffmpeg:-c:v %codec_video% -crf 18 -preset slow -c:a %codec_audio% -b:a %bitrate_audio%" -o "%nome_saida%" "!url!"
+            yt-dlp %cookies_cmd% %flag_playlist% %recode_cmd% --merge-output-format %ext_video% -f "%formato_video%" --postprocessor-args "ffmpeg:-c:v %codec_video% -crf 18 -preset slow -c:a %codec_audio% -b:a %bitrate_audio%" -o "%nome_saida%" "!url!"
         ) else (
-            yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+            yt-dlp %cookies_cmd% %flag_playlist% %recode_cmd% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
         )
     )
 )
@@ -269,13 +280,13 @@ echo  [!] Extraindo AUDIO (%ext_final%)...
 
 if "%modo_audio%"=="original" (
     echo  [MODO ORIGINAL - Melhor qualidade disponivel no site]
-    yt-dlp %cookies_cmd% %flag_playlist% -f "bestaudio/best" -o "%nome_saida%" "!url!"
+    yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail -f "bestaudio/best" -o "%nome_saida%" "!url!"
 ) else (
     if "%vbr_mode%"=="true" (
         echo  [MODO VBR MAXIMO - Melhor compressao]
-        yt-dlp %cookies_cmd% %flag_playlist% -x --audio-format %formato_audio% --audio-quality 0 --postprocessor-args "ffmpeg:-q:a 0" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail -x --audio-format %formato_audio% --audio-quality 0 --postprocessor-args "ffmpeg:-q:a 0" -o "%nome_saida%" "!url!"
     ) else (
-        yt-dlp %cookies_cmd% %flag_playlist% -x --audio-format %formato_audio% --audio-quality %quality_flag% --postprocessor-args "ffmpeg:-b:a %bitrate_custom%" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail -x --audio-format %formato_audio% --audio-quality %quality_flag% --postprocessor-args "ffmpeg:-b:a %bitrate_custom%" -o "%nome_saida%" "!url!"
     )
 )
 goto fim
@@ -321,27 +332,27 @@ if "%qual_trecho%"=="1" (
     set "modo_trecho=maxima"
 )
 if "%qual_trecho%"=="2" (
-    set "formato_trecho=bestvideo[height<=4320][fps<=120]+bestaudio/best"
+    set "formato_trecho=bestvideo[height<=4320][fps<=120]+bestaudio/best/best"
     set "filtros_video=fps=120,scale=-2:4320"
 )
 if "%qual_trecho%"=="3" (
-    set "formato_trecho=bestvideo[height<=2160][fps<=120]+bestaudio/best"
+    set "formato_trecho=bestvideo[height<=2160][fps<=120]+bestaudio/best/best"
     set "filtros_video=fps=120,scale=-2:2160"
 )
 if "%qual_trecho%"=="4" (
-    set "formato_trecho=bestvideo[height<=2160][fps<=60]+bestaudio/best"
+    set "formato_trecho=bestvideo[height<=2160][fps<=60]+bestaudio/best/best"
     set "filtros_video=fps=60,scale=-2:2160"
 )
 if "%qual_trecho%"=="5" (
-    set "formato_trecho=bestvideo[height<=1080][fps<=60]+bestaudio/best"
+    set "formato_trecho=bestvideo[height<=1080][fps<=60]+bestaudio/best/best"
     set "filtros_video=fps=60,scale=-2:1080"
 )
 if "%qual_trecho%"=="6" (
-    set "formato_trecho=bestvideo[height<=720][fps<=60]+bestaudio/best"
+    set "formato_trecho=bestvideo[height<=720][fps<=60]+bestaudio/best/best"
     set "filtros_video=fps=60,scale=-2:720"
 )
 if "%qual_trecho%"=="7" (
-    set "formato_trecho=bestvideo[height<=480]+bestaudio/best"
+    set "formato_trecho=bestvideo[height<=480]+bestaudio/best/best"
     set "filtros_video=fps=30,scale=-2:480"
 )
 
