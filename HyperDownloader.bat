@@ -162,20 +162,20 @@ echo  [!] Iniciando download de VIDEO (%ext_video%)...
 if "%modo_video%"=="original" (
     if "%modo_audio_video%"=="original" (
         echo  [MODO SUPREMO - 100%% ORIGINAL - Sem conversao]
-        yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
     ) else (
         echo  [MODO ORIGINAL VIDEO + Audio customizado]
-        yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
     )
 ) else (
     if "%modo_audio_video%"=="original" (
         echo  [Video customizado + MODO ORIGINAL AUDIO]
-        yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+        yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
     ) else (
         if "%v_fmt%"=="1" (
-            yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail --merge-output-format %ext_video% -f "%formato_video%" --postprocessor-args "ffmpeg:-c:v %codec_video% -crf 18 -preset slow -c:a %codec_audio% -b:a %bitrate_audio%" -o "%nome_saida%" "!url!"
+            yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" --postprocessor-args "ffmpeg:-c:v %codec_video% -crf 18 -preset slow -c:a %codec_audio% -b:a %bitrate_audio%" -o "%nome_saida%" "!url!"
         ) else (
-            yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
+            yt-dlp %cookies_cmd% %flag_playlist% --merge-output-format %ext_video% -f "%formato_video%" -o "%nome_saida%" "!url!"
         )
     )
 )
@@ -226,17 +226,19 @@ if "%a_fmt%"=="0" (
     set /p "qual_audio=Escolha: "
     
     set "quality_flag=0"
-    if "%qual_audio%"=="0" set "quality_flag=0"
-    if "%qual_audio%"=="1" set "quality_flag=640k"
-    if "%qual_audio%"=="2" set "quality_flag=512k"
-    if "%qual_audio%"=="3" set "quality_flag=320k"
-    if "%qual_audio%"=="4" set "quality_flag=256k"
-    if "%qual_audio%"=="5" set "quality_flag=192k"
-    if "%qual_audio%"=="6" set "quality_flag=128k"
-    if "%qual_audio%"=="7" set "quality_flag=96k"
+    set "bitrate_custom=320k"
+    set "vbr_mode="
+    
+    if "!qual_audio!"=="0" set "quality_flag=0" & set "bitrate_custom=0" & set "vbr_mode=true"
+    if "!qual_audio!"=="1" set "quality_flag=0" & set "bitrate_custom=640k"
+    if "!qual_audio!"=="2" set "quality_flag=0" & set "bitrate_custom=512k"
+    if "!qual_audio!"=="3" set "quality_flag=0" & set "bitrate_custom=320k"
+    if "!qual_audio!"=="4" set "quality_flag=1" & set "bitrate_custom=256k"
+    if "!qual_audio!"=="5" set "quality_flag=3" & set "bitrate_custom=192k"
+    if "!qual_audio!"=="6" set "quality_flag=5" & set "bitrate_custom=128k"
+    if "!qual_audio!"=="7" set "quality_flag=7" & set "bitrate_custom=96k"
 )
 
-:: Playlist
 echo.
 echo  --- E uma Playlist? ---
 set /p "eh_playlist=Baixar a playlist inteira? (y/n): "
@@ -263,21 +265,17 @@ if /i "!cookie_opt!"=="f" set "cookies_cmd=--cookies-from-browser firefox"
 if /i "!cookie_opt!"=="e" set "cookies_cmd=--cookies-from-browser edge"
 
 echo.
-echo  [!] Iniciando download de AUDIO (%ext_final%)...
+echo  [!] Extraindo AUDIO (%ext_final%)...
 
-:: Executa download de audio
 if "%modo_audio%"=="original" (
-    echo  [MODO SUPREMO - 100%% ORIGINAL]
-    yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail -f bestaudio/best -o "%nome_saida%" "!url!"
+    echo  [MODO ORIGINAL - Melhor qualidade disponivel no site]
+    yt-dlp %cookies_cmd% %flag_playlist% -f "bestaudio/best" -o "%nome_saida%" "!url!"
 ) else (
-    if "%quality_flag%"=="0" (
-        yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail -x --audio-format %formato_audio% --audio-quality 0 -o "%nome_saida%" "!url!"
+    if "%vbr_mode%"=="true" (
+        echo  [MODO VBR MAXIMO - Melhor compressao]
+        yt-dlp %cookies_cmd% %flag_playlist% -x --audio-format %formato_audio% --audio-quality 0 --postprocessor-args "ffmpeg:-q:a 0" -o "%nome_saida%" "!url!"
     ) else (
-        if "%formato_audio%"=="vorbis" (
-            yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail -x --audio-format %formato_audio% --audio-quality %quality_flag% -o "%nome_saida%" "!url!"
-        ) else (
-            yt-dlp %cookies_cmd% %flag_playlist% --embed-thumbnail -x --audio-format %formato_audio% --audio-quality %quality_flag% -o "%nome_saida%" "!url!"
-        )
+        yt-dlp %cookies_cmd% %flag_playlist% -x --audio-format %formato_audio% --audio-quality %quality_flag% --postprocessor-args "ffmpeg:-b:a %bitrate_custom%" -o "%nome_saida%" "!url!"
     )
 )
 goto fim
@@ -288,63 +286,68 @@ goto fim
 :config_trecho
 cls
 echo =========================================================
-echo  CONFIGURACAO DE TRECHO (Cortar Video)
+echo  CONFIGURACAO DE TRECHO
 echo =========================================================
 echo.
-echo  --- Formato de Saida ---
-echo  [1] MP4 (Video - Compativel universal)
-echo  [2] MP3 (So audio - Musica/Podcast)
-echo  [3] FLAC (Audio sem perda)
-echo  [4] OGG (Audio - Spotify/Jogos)
-set /p "trecho_fmt=Escolha: "
+echo  --- Definir Tempo ---
+set /p "t_inicio=Inicio (ex: 00:01:20 ou 1:20): "
+set /p "t_fim=Fim    (ex: 00:01:25 ou 1:25): "
 
-set "ext_trecho=mp4"
-set "tipo_trecho=video"
-if "%trecho_fmt%"=="2" (
-    set "ext_trecho=mp3"
-    set "tipo_trecho=audio"
-)
-if "%trecho_fmt%"=="3" (
-    set "ext_trecho=flac"
-    set "tipo_trecho=audio"
-)
-if "%trecho_fmt%"=="4" (
-    set "ext_trecho=ogg"
-    set "tipo_trecho=audio"
-)
+if "%t_inicio%"=="" goto config_trecho
+if "%t_fim%"=="" goto config_trecho
 
-:: Se for audio, pede qualidade
-if "%tipo_trecho%"=="audio" (
-    echo.
-    echo  --- Qualidade de Audio ---
-    echo  [0] SUPREMA (VBR q0)
-    echo  [1] INSANA (640 kbps)
-    echo  [2] MAXIMA (320 kbps)
-    echo  [3] Alta (256 kbps)
-    echo  [4] Media (192 kbps)
-    set /p "qual_trecho=Escolha: "
-    
-    set "qual_flag_trecho=0"
-    if "%qual_trecho%"=="1" set "qual_flag_trecho=640k"
-    if "%qual_trecho%"=="2" set "qual_flag_trecho=320k"
-    if "%qual_trecho%"=="3" set "qual_flag_trecho=256k"
-    if "%qual_trecho%"=="4" set "qual_flag_trecho=192k"
-)
-
-:: Define os tempos
-echo.
-echo  --- Tempo do INICIO do trecho (formato: HH:MM:SS ou MM:SS ou SS) ---
-echo  Exemplos: 1:30 ou 0:0:15 ou 90
-set /p "t_inicio=INICIO: "
+set "secao_cmd=--download-sections *%t_inicio%-%t_fim% --force-keyframes-at-cuts"
 
 echo.
-echo  --- Tempo do FIM do trecho (formato: HH:MM:SS ou MM:SS ou SS) ---
-echo  Exemplos: 3:15 ou 0:2:45 ou 195
-set /p "t_fim=FIM: "
+echo  --- Qualidade de Video ---
+echo  [0] SUPREMA (100%% sem alteracao - Copy codec)
+echo  [1] MAXIMA ABSOLUTA (Qualidade maxima com re-encode)
+echo  [2] 8K (4320p 120fps) - ABSURDO
+echo  [3] 4K (2160p 120fps)
+echo  [4] 4K (2160p 60fps)
+echo  [5] Full HD (1080p 60fps)
+echo  [6] HD (720p 60fps)
+echo  [7] SD (480p)
+set /p "qual_trecho=Escolha: "
 
-:: Remove espacos
-set "t_inicio=!t_inicio: =!"
-set "t_fim=!t_fim: =!"
+set "modo_trecho="
+set "formato_trecho=bestvideo*+bestaudio/best"
+set "filtros_video="
+
+if "%qual_trecho%"=="0" (
+    set "modo_trecho=supremo"
+)
+if "%qual_trecho%"=="1" (
+    set "modo_trecho=maxima"
+)
+if "%qual_trecho%"=="2" (
+    set "formato_trecho=bestvideo[height<=4320][fps<=120]+bestaudio/best"
+    set "filtros_video=fps=120,scale=-2:4320"
+)
+if "%qual_trecho%"=="3" (
+    set "formato_trecho=bestvideo[height<=2160][fps<=120]+bestaudio/best"
+    set "filtros_video=fps=120,scale=-2:2160"
+)
+if "%qual_trecho%"=="4" (
+    set "formato_trecho=bestvideo[height<=2160][fps<=60]+bestaudio/best"
+    set "filtros_video=fps=60,scale=-2:2160"
+)
+if "%qual_trecho%"=="5" (
+    set "formato_trecho=bestvideo[height<=1080][fps<=60]+bestaudio/best"
+    set "filtros_video=fps=60,scale=-2:1080"
+)
+if "%qual_trecho%"=="6" (
+    set "formato_trecho=bestvideo[height<=720][fps<=60]+bestaudio/best"
+    set "filtros_video=fps=60,scale=-2:720"
+)
+if "%qual_trecho%"=="7" (
+    set "formato_trecho=bestvideo[height<=480]+bestaudio/best"
+    set "filtros_video=fps=30,scale=-2:480"
+)
+
+echo.
+echo  --- Com Audio? ---
+set /p "com_audio=Incluir audio? (y/n): "
 
 :: Cookies
 echo.
@@ -361,17 +364,28 @@ if /i "!cookie_opt!"=="f" set "cookies_cmd=--cookies-from-browser firefox"
 if /i "!cookie_opt!"=="e" set "cookies_cmd=--cookies-from-browser edge"
 
 echo.
-echo  [!] Baixando trecho de !t_inicio! ate !t_fim!...
+echo  [!] Cortando trecho de %t_inicio% ate %t_fim%...
 
-:: Download de trecho de video (MP4)
-if "%tipo_trecho%"=="video" (
-    yt-dlp %cookies_cmd% --embed-thumbnail --download-sections "*!t_inicio!-!t_fim!" --force-keyframes-at-cuts -f "bestvideo*+bestaudio/best" --merge-output-format mp4 -o "%%(title)s_trecho.%%(ext)s" "!url!"
-) else (
-    :: Download de trecho de audio (MP3/FLAC/OGG)
-    if "%qual_flag_trecho%"=="0" (
-        yt-dlp %cookies_cmd% --embed-thumbnail --download-sections "*!t_inicio!-!t_fim!" --force-keyframes-at-cuts -x --audio-format %ext_trecho% --audio-quality 0 -o "%%(title)s_trecho.%%(ext)s" "!url!"
+if "%modo_trecho%"=="supremo" (
+    echo  [MODO SUPREMO - 100%% ORIGINAL - Copy codec]
+    if /i "%com_audio%"=="n" (
+        yt-dlp %cookies_cmd% %secao_cmd% -f "%formato_trecho%" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v copy -an" -o "%%(title)s_Trecho.%%(ext)s" "!url!"
     ) else (
-        yt-dlp %cookies_cmd% --embed-thumbnail --download-sections "*!t_inicio!-!t_fim!" --force-keyframes-at-cuts -x --audio-format %ext_trecho% --audio-quality %qual_flag_trecho% -o "%%(title)s_trecho.%%(ext)s" "!url!"
+        yt-dlp %cookies_cmd% %secao_cmd% -f "%formato_trecho%" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v copy -c:a copy" -o "%%(title)s_Trecho.%%(ext)s" "!url!"
+    )
+) else if "%modo_trecho%"=="maxima" (
+    echo  [MODO MAXIMA ABSOLUTA - Re-encode CRF 15]
+    if /i "%com_audio%"=="n" (
+        yt-dlp %cookies_cmd% %secao_cmd% -f "%formato_trecho%" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -crf 15 -preset slow -an" -o "%%(title)s_Trecho.%%(ext)s" "!url!"
+    ) else (
+        yt-dlp %cookies_cmd% %secao_cmd% -f "%formato_trecho%" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -crf 15 -preset slow -c:a aac -b:a 320k" -o "%%(title)s_Trecho.%%(ext)s" "!url!"
+    )
+) else (
+    echo  [Com filtros customizados]
+    if /i "%com_audio%"=="n" (
+        yt-dlp %cookies_cmd% %secao_cmd% -f "%formato_trecho%" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -crf 18 -vf %filtros_video% -an" -o "%%(title)s_Trecho.%%(ext)s" "!url!"
+    ) else (
+        yt-dlp %cookies_cmd% %secao_cmd% -f "%formato_trecho%" --merge-output-format mp4 --postprocessor-args "ffmpeg:-c:v libx264 -crf 18 -vf %filtros_video% -c:a aac -b:a 192k" -o "%%(title)s_Trecho.%%(ext)s" "!url!"
     )
 )
 goto fim
@@ -382,39 +396,25 @@ goto fim
 :config_animacao
 cls
 echo =========================================================
-echo  CONFIGURACAO DE ANIMACAO/LOOP
+echo  CONFIGURACAO DE ANIMACAO
 echo =========================================================
 echo.
-echo  --- Formato ---
-echo  [1] GIF (Universal - Alta compatibilidade)
-echo  [2] WebP (Sticker WhatsApp/Telegram - Menor tamanho)
-echo  [3] MP4 (Video sem audio - Para compartilhar)
+echo  --- Tipo de Arquivo ---
+echo  [1] GIF (Classico - Arquivo maior, compativel)
+echo  [2] WebP (Moderno - Leve, alta qualidade)
+echo  [3] MP4 (Apenas o trecho, sem converter)
 set /p "ani_fmt=Escolha: "
 
-:: Secao opcional
 echo.
-echo  --- Quer APENAS UM TRECHO do video? ---
-echo  [n] Nao, quero o video completo
-echo  [y] Sim, quero cortar um pedaco
-set /p "ani_trecho=Opcao: "
+echo  --- Recorte de Tempo ---
+echo  Deixe em branco para baixar o video todo
+set /p "t_inicio=Inicio (ex: 00:01:20): "
+set /p "t_fim=Fim    (ex: 00:01:25): "
 
 set "secao_cmd="
-if /i "%ani_trecho%"=="y" (
-    echo.
-    echo  --- Tempo do INICIO (HH:MM:SS ou MM:SS ou SS) ---
-    set /p "t_inicio=INICIO: "
-    
-    echo.
-    echo  --- Tempo do FIM (HH:MM:SS ou MM:SS ou SS) ---
-    set /p "t_fim=FIM: "
-    
-    set "t_inicio=!t_inicio: =!"
-    set "t_fim=!t_fim: =!"
-    
-    if not "!t_inicio!"=="" (
-        if not "!t_fim!"=="" (
-            set "secao_cmd=--download-sections *!t_inicio!-!t_fim! --force-keyframes-at-cuts"
-        )
+if not "%t_inicio%"=="" (
+    if not "%t_fim%"=="" (
+        set "secao_cmd=--download-sections *%t_inicio%-%t_fim% --force-keyframes-at-cuts"
     )
 )
 
@@ -461,7 +461,7 @@ if /i "!cookie_opt!"=="e" set "cookies_cmd=--cookies-from-browser edge"
 :: MP4 simples (sem conversao)
 if "%ani_fmt%"=="3" (
     echo [!] Baixando trecho MP4...
-    yt-dlp %cookies_cmd% --embed-thumbnail %secao_cmd% -f "bestvideo*+bestaudio/best" --merge-output-format mp4 -o "%%(title)s_trecho.%%(ext)s" "!url!"
+    yt-dlp %cookies_cmd% %secao_cmd% -f "bestvideo*+bestaudio/best" --merge-output-format mp4 -o "%%(title)s_trecho.%%(ext)s" "!url!"
     goto fim
 )
 
@@ -488,7 +488,7 @@ if "%ani_fmt%"=="2" (
 )
 
 :: Executa download + conversao
-yt-dlp %cookies_cmd% --embed-thumbnail %secao_cmd% -f "bestvideo*+bestaudio/best" --merge-output-format mp4 --exec "!cmd_final!" -o "temp_%%(id)s.mp4" "!url!"
+yt-dlp %cookies_cmd% %secao_cmd% -f "bestvideo*+bestaudio/best" --merge-output-format mp4 --exec "!cmd_final!" -o "temp_%%(id)s.mp4" "!url!"
 goto fim
 
 :: =========================================================
